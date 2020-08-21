@@ -1,13 +1,15 @@
 import argparse
 import numpy as np
 import os
+import math
 import pickle
 from tqdm import tqdm
 from sklearn.metrics import roc_auc_score
-from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_curve, confusion_matrix
 from sklearn.covariance import LedoitWolf
 from scipy.spatial.distance import mahalanobis
 import matplotlib.pyplot as plt
+from scipy.stats.distributions import chi2
 
 import torch
 import torch.nn.functional as F
@@ -40,7 +42,6 @@ def main():
     os.makedirs(os.path.join(args.save_path, 'temp'), exist_ok=True)
 
     total_roc_auc = []
-
     for class_name in mvtec.CLASS_NAMES:
 
         train_dataset = mvtec.MVTecDataset(class_name=class_name, is_train=True)
@@ -91,20 +92,33 @@ def main():
 
         # calculate Mahalanobis distance per each level of EfficientNet
         dist_list = []
+        D = []
         for t_idx, test_output in enumerate(test_outputs):
             mean = train_outputs[t_idx][0]
+            D.append(mean.shape[0])
             cov_inv = np.linalg.inv(train_outputs[t_idx][1])
             dist = [mahalanobis(sample, mean, cov_inv) for sample in test_output]
             dist_list.append(np.array(dist))
 
         # Anomaly score is followed by unweighted summation of the Mahalanobis distances
-        scores = np.sum(np.array(dist_list), axis=0)
+        dist_list = np.array(dist_list)
+        scores = np.sum(dist_list, axis=0)
+
+        #calculate the thresholds
+        thresh = []
+        for d in D:
+            thresh.append(math.sqrt(chi2.ppf(0.7, df = d))) #Setting FPR = 0.3
+
+        for i, t in enumerate(thresh):
+            dist_list[i] = dist_list[i]>t
 
         # calculate image-level ROC AUC score
         fpr, tpr, _ = roc_curve(gt_list, scores)
         roc_auc = roc_auc_score(gt_list, scores)
+        # calculate confusion matrix of third last layer features
+        tn, fp, fn, tp = confusion_matrix(gt_list, dist_list[-3]).ravel() #Considering Level 7 features for confusion matrix
         total_roc_auc.append(roc_auc)
-        print('%s ROCAUC: %.3f' % (class_name, roc_auc))
+        print('%s ROCAUC: %.3f TN: %.3f FP: %.3f FN: %.3f TP: %.3f' % (class_name, roc_auc, tn, fp, fn, tp))
         plt.plot(fpr, tpr, label='%s ROCAUC: %.3f' % (class_name, roc_auc))
 
     print('Average ROCAUC: %.3f' % np.mean(total_roc_auc))
