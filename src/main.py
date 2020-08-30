@@ -52,9 +52,12 @@ def main():
         train_dataloader = DataLoader(train_dataset, batch_size=32, pin_memory=True)
         test_dataset = mvtec.MVTecDataset(class_name=class_name, is_train=False)
         test_dataloader = DataLoader(test_dataset, batch_size=32, pin_memory=True)
-
-        train_outputs = [[] for _ in range(9)]
-        test_outputs = [[] for _ in range(9)]
+        if args.model_name == 'efficientnet-b4'
+            train_outputs = [[] for _ in range(9)]
+            test_outputs = [[] for _ in range(9)]
+        elif args.model_name == 'efficientnet-b0'
+            train_outputs = [[] for _ in range(7)]
+            test_outputs = [[] for _ in range(7)]
 
         # extract train set features
         train_feat_filepath = os.path.join(args.save_path, 'temp', 'train_%s_%s.pkl' % (class_name, args.model_name))
