@@ -56,8 +56,8 @@ def main():
             train_outputs = [[] for _ in range(9)]
             test_outputs = [[] for _ in range(9)]
         elif args.model_name == 'efficientnet-b0':
-            train_outputs = [[] for _ in range(7)]
-            test_outputs = [[] for _ in range(7)]
+            train_outputs = [[] for _ in range(8)]
+            test_outputs = [[] for _ in range(8)]
 
         # extract train set features
         train_feat_filepath = os.path.join(args.save_path, 'temp', 'train_%s_%s.pkl' % (class_name, args.model_name))
